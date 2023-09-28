@@ -1,0 +1,141 @@
+<?php
+
+include_once drupal_get_path('module', 'user'). '/user.pages.inc'; 
+
+
+
+
+use Drupal\Controller\hrms_authenticationController;
+
+function hrms_authentication_menu() {
+  $items = array();
+  $items['authorize/registration'] = array( //this creates a URL that will call this form at "hrms/hrms-authentication"
+    'title' => 'Sign Up',
+    'description' => 'A form to mess around with.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('hrms_authentication_form'),
+    'access callback' => TRUE,
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+function hrms_authentication_form($form, &$form_state) {
+
+
+$form['left']['my_target'] = array(
+  '#prefix' => '<div class="left-c">',
+  '#suffix' => '</div>',
+  '#type' => 'container',
+    //…
+);  
+//$form['#action'] = url("/user/register");
+
+ $form['user_name'] = array(
+    '#type' => 'textfield', //you can find a list of available types in the form api
+    '#title' => 'Username',
+    '#size' => 60,
+    '#maxlength' => 7,
+    '#element_validate' => array('element_validate_integer'),
+    '#description' => t('Note : For Successful Registration Enter PF Number as your username.'),
+    '#required' => TRUE, //make this field required 
+  );  
+
+  $form['fetch_button'] = array(
+    '#type' => 'submit',
+    '#value' => t('Enter'),
+      );
+  
+  return $form;
+}
+
+
+function hrms_authentication_form_callback($form, &$fstate) {
+session_start();
+$userName = $_POST["user_name"];
+$_SESSION['userName']=$_POST['user_name'];
+$notvalid = "Not a valid user for Registration, Please Enter Valid Username.";
+$valid = "You are valid user for Registration, You can Sign Up now by setting your password in below form.";
+debug(array_keys($userName['elements']));
+$curl = curl_init();
+curl_setopt_array($curl, array(
+  CURLOPT_PORT => "3443",
+  CURLOPT_URL => "https://10.191.172.40:3443/gen5/gateway/ac_employee/pf/details",
+  CURLOPT_RETURNTRANSFER => true,
+  CURLOPT_ENCODING => "",
+  CURLOPT_MAXREDIRS => 10,
+  CURLOPT_TIMEOUT => 30,
+  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+  CURLOPT_CUSTOMREQUEST => "POST",
+  CURLOPT_SSL_VERIFYPEER => false,
+  CURLOPT_SSL_VERIFYHOST => false,
+  CURLOPT_POSTFIELDS => "{\"PF_NUMBER\":\"$userName\",\"SOURCE_ID\":\"ST\",\"REQUEST_REFERENCE_NUMBER\":\"SBIST40174DPPFB9000NY0007\"}",
+  CURLOPT_HTTPHEADER => array(
+    "Content-Type: application/json",
+  ),
+));
+//echo '<pre>'; var_dump($response); echo '</pre>';
+$response = curl_exec($curl);
+$http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+if ($http_code == 200) {
+$data = json_decode($response);
+
+$responseStatus = $data->RESPONSE_STATUS;
+$userName1 = $data->PF_NUMBER;
+$firstName = $data->FIRST_NAME;
+$middleName = $data->MIDDLE_NAME;
+$lastName = $data->LAST_NAME;
+$email = $data->EMAIL;
+$org = $data->PARENT_BANK;
+$mobileNumber = $data-> MOBILE_NUMBER;
+$_SESSION['firstName'] = $firstName;
+$_SESSION['middleName'] = $middleName;
+$_SESSION['lastName'] = $lastName;
+$_SESSION['email'] = $email;
+$_SESSION['org'] = $org;
+$_SESSION['mobile_number'] = $mobileNumber;
+$_SESSION["time_stamp"] = time(); 
+
+if ($responseStatus == 0)
+{
+
+//echo "<strong> your response is : " . $response . "</strong>";
+//drupal_set_message("your response is : ". $userName );
+
+//drupal_set_message("your response is : ". $response );
+drupal_set_message("$valid", $type = 'status');
+// global $user;
+// print user_view($user);
+//echo "user op is:" . $user;
+drupal_goto('/user/register');
+
+//drupal_goto("/user/register", array("query" => array("user_name" => $userName, "email" => $email, "first_name" => $firstName, "middle_name" => $middleName, "last_name" => $lastName,  "org" => $org, "mobile_number" => $mobileNumber)));
+}
+
+else {
+drupal_set_message("$notvalid", $type = 'warning');
+}
+
+
+}
+else{
+echo "HRMS service failure";
+}
+curl_close($curl);
+
+}
+
+function form_sumbit($form, &$form_state){
+drupal_set_message("hello hrms");
+}
+
+
+function hrms_authentication_form_submit($form, &$form_state) {
+hrms_authentication_form_callback();
+
+
+}
+
+?>
