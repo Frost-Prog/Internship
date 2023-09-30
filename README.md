@@ -40,3 +40,46 @@ public class BlobToPDFConverter {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URISyntaxException;
+
+public class SimpleAPICall {
+    public static void main(String[] args) {
+        HttpClient httpClient = HttpClient.newHttpClient();
+
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI("https://jsonplaceholder.typicode.com/posts/1"))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            int statusCode = response.statusCode();
+            String responseBody = response.body();
+            HttpHeaders headers = response.headers();
+
+            System.out.println("Status Code: " + statusCode);
+            System.out.println("Response Body: " + responseBody);
+            System.out.println("Response Headers: " + headers);
+        } catch (IOException | InterruptedException | URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
