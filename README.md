@@ -49,37 +49,39 @@ public class BlobToPDFConverter {
 
 
 
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URISyntaxException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class SimpleAPICall {
     public static void main(String[] args) {
-        HttpClient httpClient = HttpClient.newHttpClient();
-
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI("https://jsonplaceholder.typicode.com/posts/1"))
-                    .build();
+            URL url = new URL("https://jsonplaceholder.typicode.com/posts/1");
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            int responseCode = connection.getResponseCode();
 
-            int statusCode = response.statusCode();
-            String responseBody = response.body();
-            HttpHeaders headers = response.headers();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+                StringBuilder response = new StringBuilder();
 
-            System.out.println("Status Code: " + statusCode);
-            System.out.println("Response Body: " + responseBody);
-            System.out.println("Response Headers: " + headers);
-        } catch (IOException | InterruptedException | URISyntaxException e) {
+                while ((inputLine = in.readLine()) != null) {
+                    response.append(inputLine);
+                }
+                in.close();
+
+                System.out.println("Response Code: " + responseCode);
+                System.out.println("Response Body: " + response.toString());
+            } else {
+                System.out.println("HTTP GET request failed with response code: " + responseCode);
+            }
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 }
-
 
