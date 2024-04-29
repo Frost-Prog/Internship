@@ -1,3 +1,59 @@
+
+
+
+
+
+
+
+import javax.xml.soap.*;
+
+public class SOAPRequestWithSecurity {
+
+    public static void main(String[] args) {
+        try {
+            // Create SOAP message
+            MessageFactory factory = MessageFactory.newInstance();
+            SOAPMessage soapMessage = factory.createMessage();
+            SOAPPart soapPart = soapMessage.getSOAPPart();
+            SOAPEnvelope envelope = soapPart.getEnvelope();
+
+            // Add namespaces for WS-Security
+            envelope.addNamespaceDeclaration("wsse", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd");
+            envelope.addNamespaceDeclaration("wsu", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd");
+            envelope.addNamespaceDeclaration("ds", "http://www.w3.org/2000/09/xmldsig#");
+
+            // Add security header
+            SOAPHeader header = envelope.getHeader();
+            SOAPElement security = header.addChildElement("Security", "wsse");
+            security.addAttribute(envelope.createName("mustUnderstand"), "1");
+
+            // Add username token
+            SOAPElement usernameToken = security.addChildElement("UsernameToken", "wsse");
+            SOAPElement username = usernameToken.addChildElement("Username", "wsse");
+            username.addTextNode("your_username_here");
+
+            // Add timestamp
+            SOAPElement timestamp = security.addChildElement("Timestamp", "wsu");
+            timestamp.addChildElement("Created", "wsu").addTextNode("timestamp_here");
+            timestamp.addChildElement("Expires", "wsu").addTextNode("expiration_timestamp_here");
+
+            // Add digital signature
+            SOAPElement signature = security.addChildElement("Signature", "ds");
+            SOAPElement signedInfo = signature.addChildElement("SignedInfo", "ds");
+            signedInfo.addChildElement("CanonicalizationMethod", "ds").setAttribute("Algorithm", "http://www.w3.org/TR/2001/REC-xml-c14n-20010315");
+            signedInfo.addChildElement("SignatureMethod", "ds").setAttribute("Algorithm", "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
+            // Add reference, digest value, and signature value here
+
+            // Print the SOAP request
+            soapMessage.writeTo(System.out);
+
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+    }
+}
+
+--------------
 import javax.xml.soap.*;
 import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
