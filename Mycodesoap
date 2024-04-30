@@ -1,3 +1,54 @@
+import org.apache.cxf.binding.soap.SoapHeader;
+import org.apache.cxf.headers.Header;
+import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
+import org.apache.cxf.ws.security.SecurityConstants;
+import org.apache.cxf.ws.security.wss4j.WSS4JOutInterceptor;
+import org.apache.wss4j.dom.WSConstants;
+import org.apache.wss4j.dom.handler.WSHandlerConstants;
+
+import javax.xml.namespace.QName;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class WSClient {
+
+    public static void main(String[] args) {
+        try {
+            // Create the client proxy
+            JaxWsProxyFactoryBean factory = new JaxWsProxyFactoryBean();
+            factory.setServiceClass(YourWebServicePortType.class);
+            factory.setAddress("http://example.com/YourWebService");
+
+            YourWebServicePortType port = (YourWebServicePortType) factory.create();
+
+            // Configure WS-Security
+            Map<String, Object> outProps = new HashMap<>();
+            outProps.put(WSHandlerConstants.ACTION, WSHandlerConstants.USERNAME_TOKEN);
+            outProps.put(WSHandlerConstants.USER, "username");
+            outProps.put(WSHandlerConstants.PASSWORD_TYPE, WSConstants.PW_TEXT);
+
+            // Add the WSS4JOutInterceptor to the client's outgoing interceptor chain
+            WSS4JOutInterceptor wssOut = new WSS4JOutInterceptor(outProps);
+            port = (YourWebServicePortType) ClientProxy.getClient(port).getEndpoint().getBinding().getHandlerChain().add(wssOut);
+
+            // Invoke the web service operation
+            port.yourWebServiceOperation();
+
+            // You can access the SOAP message headers if needed
+            List<Header> headers = (List<Header>) port.getRequestContext().get(SoapHeader.HEADER_LIST);
+            for (Header header : headers) {
+                System.out.println("Header name: " + header.getName().getLocalPart());
+                System.out.println("Header value: " + header.getObject());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+--------------
 const crypto = require('crypto');
 
 function encryptData(data, key, iv) {
