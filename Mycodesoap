@@ -1,3 +1,39 @@
+import javax.xml.soap.*;
+import java.io.*;
+
+public class SOAPMessageLoaderFromFile {
+    public static void main(String[] args) {
+        try {
+            // Create a SOAP message factory
+            MessageFactory factory = MessageFactory.newInstance();
+
+            // Load the SOAP message from a file
+            File file = new File("soap_message.xml");
+            FileInputStream fileInputStream = new FileInputStream(file);
+            SOAPMessage message = factory.createMessage(new MimeHeaders(), fileInputStream);
+
+            // Process the SOAP message as needed
+            // For example, you can extract information from the message headers
+            SOAPHeader header = message.getSOAPHeader();
+            Iterator<SOAPHeaderElement> headerIterator = header.examineAllHeaderElements();
+            while (headerIterator.hasNext()) {
+                SOAPHeaderElement headerElement = headerIterator.next();
+                System.out.println("Header name: " + headerElement.getElementName());
+                System.out.println("Header value: " + headerElement.getValue());
+            }
+
+            // Access the SOAP body
+            SOAPBody body = message.getSOAPBody();
+            // Process the SOAP body as needed
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+--------------------------------
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.*;
