@@ -1,3 +1,21 @@
+const crypto = require('crypto');
+
+function encryptData(data, key, iv) {
+    const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+    let encryptedData = cipher.update(data, 'utf8', 'base64');
+    encryptedData += cipher.final('base64');
+    return encryptedData;
+}
+
+// Example usage:
+const dataToEncrypt = "Hello, world!";
+const encryptionKey = Buffer.from('0123456789abcdef0123456789abcdef', 'hex'); // 16-byte key
+const iv = Buffer.alloc(16, 0); // Initialization vector (IV) must be 16 bytes long
+
+const encryptedData = encryptData(dataToEncrypt, encryptionKey, iv);
+console.log('Encrypted data:', encryptedData);
+
+----------------------
 import java.io.File;
 import java.io.FileOutputStream;
 import javax.xml.transform.*;
