@@ -1,3 +1,112 @@
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+public class WSSecurity {
+
+    public static void main(String[] args) {
+        try {
+            // Load keystore containing private key for signing
+            // (Assuming this part remains the same)
+
+            // Load public key for encryption
+            // (Assuming this part remains the same)
+
+            // Load hardcoded SOAP message to be signed and encrypted
+            Document soapMessage = loadHardcodedSOAPMessage();
+
+            // Sign the SOAP message
+            // (Assuming this part remains the same)
+
+            // Encrypt the SOAP message
+            // (Assuming this part remains the same)
+
+            // Send the signed and encrypted SOAP message
+            sendSOAPMessage(soapMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to load hardcoded SOAP message
+    public static Document loadHardcodedSOAPMessage() throws ParserConfigurationException {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.newDocument();
+
+            // Create SOAP Envelope element
+            Element envelope = document.createElementNS("http://schemas.xmlsoap.org/soap/envelope/", "SOAP-ENV:Envelope");
+            document.appendChild(envelope);
+
+            // Create SOAP Header element
+            Element header = document.createElement("SOAP-ENV:Header");
+            envelope.appendChild(header);
+
+            // Create Security element
+            Element security = document.createElementNS("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd", "wsse:Security");
+            security.setAttribute("mustUnderstand", "1");
+            header.appendChild(security);
+
+            // Create UsernameToken element
+            Element usernameToken = document.createElement("wsse:UsernameToken");
+            security.appendChild(usernameToken);
+
+            // Create Username element
+            Element username = document.createElement("wsse:Username");
+            username.appendChild(document.createTextNode("B000200206"));
+            usernameToken.appendChild(username);
+
+            // Create Timestamp element
+            Element timestamp = document.createElementNS("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd", "wsu:Timestamp");
+            security.appendChild(timestamp);
+
+            // Create Created element
+            Element created = document.createElement("wsu:Created");
+            created.appendChild(document.createTextNode("30"));
+            timestamp.appendChild(created);
+
+            // Create Expires element
+            Element expires = document.createElement("wsu:Expires");
+            expires.appendChild(document.createTextNode("30"));
+            timestamp.appendChild(expires);
+
+            // Create Signature element
+            Element signature = document.createElementNS("http://www.w3.org/2000/09/xmldsig#", "ds:Signature");
+            security.appendChild(signature);
+
+            // Create SignedInfo element
+            Element signedInfo = document.createElement("ds:SignedInfo");
+            signature.appendChild(signedInfo);
+
+            // Create CanonicalizationMethod element
+            Element canonicalizationMethod = document.createElement("ds:CanonicalizationMethod");
+            canonicalizationMethod.setAttribute("Algorithm", "http://www.w3.org/TR/2001/REC-xml-c14n-20010315");
+            signedInfo.appendChild(canonicalizationMethod);
+
+            // Create SignatureMethod element
+            Element signatureMethod = document.createElement("ds:SignatureMethod");
+            signatureMethod.setAttribute("Algorithm", "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
+            signedInfo.appendChild(signatureMethod);
+
+            return document;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Method to send SOAP message
+    public static void sendSOAPMessage(Document soapMessage) {
+        // Implement sending logic
+    }
+}
+
+
+
+------------------------
 import javax.xml.soap.*;
 import java.io.*;
 
