@@ -1,3 +1,70 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import org.w3c.dom.Document;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+public class WSSecurity {
+
+    public static void main(String[] args) {
+        try {
+            // Load keystore containing private key for signing
+            // (Assuming this part remains the same)
+
+            // Load public key for encryption
+            // (Assuming this part remains the same)
+
+            // Load SOAP message to be signed and encrypted from file
+            Document soapMessage = loadSOAPMessage("path/to/soap_message.txt");
+
+            // Sign the SOAP message
+            // (Assuming this part remains the same)
+
+            // Encrypt the SOAP message
+            // (Assuming this part remains the same)
+
+            // Send the signed and encrypted SOAP message
+            sendSOAPMessage(soapMessage);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Method to load SOAP message from file
+    public static Document loadSOAPMessage(String filePath) throws ParserConfigurationException, IOException {
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true); // Ensure namespaces are processed
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            String xmlContent = readTextFile(filePath);
+            return builder.parse(new ByteArrayInputStream(xmlContent.getBytes()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Method to read text file
+    private static String readTextFile(String filePath) throws IOException {
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+        }
+        return content.toString();
+    }
+
+    // Method to send SOAP message
+    public static void sendSOAPMessage(Document soapMessage) {
+        // Implement sending logic
+    }
+}
+
+-----------------------
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import javax.xml.parsers.DocumentBuilder;
