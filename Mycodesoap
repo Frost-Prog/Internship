@@ -1,4 +1,229 @@
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.rmi.MarshalException;
+import java.security.*;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Properties;
+
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.crypto.dsig.*;
+import javax.xml.crypto.dsig.dom.DOMSignContext;
+import javax.xml.crypto.dsig.keyinfo.*;
+import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
+import javax.xml.crypto.dsig.spec.TransformParameterSpec;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.MimeHeaders;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPHeader;
+import javax.xml.soap.SOAPHeaderElement;
+import javax.xml.soap.SOAPMessage;
+
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
+
+public class EVC {
+	static String jkspwd = "password";
+	static String jkspath="/ibmdevportal.jks";
+	static String propertiesPath="/opt/IBM/PropertyFile/KeyMapper.properties";
+	static String base64PrivateKey, base64publickey, base64sourcepublickey = null;
+	static HashMap<String, String> hashmap_public = new HashMap<>();
+	static String certpath = "C:\\Users\\vtcs2090441\\Downloads\\NPCISigner.cer";
+	
+	
+    // Method to sign the SOAP message using SHA-1 algorithm
+    public static void signSOAPMessage(Document soapMessage, PrivateKey privateKey, X509Certificate cert) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, MarshalException, XMLSignatureException, KeyException, javax.xml.crypto.MarshalException {
+        XMLSignatureFactory xmlSigFactory = XMLSignatureFactory.getInstance("DOM");
+        
+        // Create a Reference to the enveloped document
+        Reference ref = xmlSigFactory.newReference("", xmlSigFactory.newDigestMethod(DigestMethod.SHA1, null),
+                Collections.singletonList(xmlSigFactory.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null)),
+                null, null);
+        
+        // Create a SignedInfo
+        SignedInfo signedInfo = xmlSigFactory.newSignedInfo(
+                xmlSigFactory.newCanonicalizationMethod(CanonicalizationMethod.INCLUSIVE,
+                        (C14NMethodParameterSpec) null),
+                xmlSigFactory.newSignatureMethod(SignatureMethod.RSA_SHA1, null),
+                Collections.singletonList(ref));
+        
+        // Create a KeyInfo containing the public key
+        KeyInfoFactory keyInfoFactory = xmlSigFactory.getKeyInfoFactory();
+        KeyValue keyValuePair = keyInfoFactory.newKeyValue(cert.getPublicKey());
+        KeyInfo keyInfo = keyInfoFactory.newKeyInfo(Collections.singletonList(keyValuePair));
+        
+        // Create the XMLSignature
+        XMLSignature signature = xmlSigFactory.newXMLSignature(signedInfo, keyInfo);
+        
+        // Sign the SOAP message
+        DOMSignContext signContext = new DOMSignContext(privateKey, soapMessage.getDocumentElement());
+        signature.sign(signContext);
+    }
+    
+    // Method to encrypt the SOAP message using the public key
+    public static void encryptSOAPMessage(Document soapMessage, PublicKey publicKey) {
+        // Implement encryption logic using public key
+    }
+    
+    public static void main(String[] args) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException, UnrecoverableKeyException, InvalidAlgorithmParameterException, MarshalException, XMLSignatureException, KeyException, javax.xml.crypto.MarshalException, SOAPException {
+        // Load keystore containing private key for signing
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        FileInputStream fis = new FileInputStream("ibmdevportal.jks");
+        keyStore.load(fis, "password".toCharArray());
+        
+        // Get private key and certificate
+        String alias = "";
+        String password = jkspwd;
+        PrivateKey privateKey = getPrivateKeyPK();
+        System.out.println(privateKey);
+        FileInputStream fis1 = new FileInputStream(certpath);
+		CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+		X509Certificate certificate = (X509Certificate) certificateFactory.generateCertificate(fis1);
+//        System.out.println("This is cert"+certificate);
+        
+        // Load public key for encryption
+        KeyStore trustStore = KeyStore.getInstance("JKS");
+        FileInputStream fisTrust = new FileInputStream("ibmdevportal.jks");
+        trustStore.load(fisTrust, "password".toCharArray());
+        PublicKey publicKey = getPublicKey();
+        java.security.interfaces.RSAPublicKey rsaPublicKey = (java.security.interfaces.RSAPublicKey) publicKey;
+        System.out.println(rsaPublicKey);
+        
+        // Load SOAP message to be signed and encrypted
+        Document soapMessage = (Document) loadSOAPMessage("soap1.txt");
+        
+        // Sign the SOAP message
+        signSOAPMessage(soapMessage, privateKey, certificate);
+        
+        // Encrypt the SOAP message
+        encryptSOAPMessage(soapMessage, publicKey);
+        
+        // Send the signed and encrypted SOAP message
+        sendSOAPMessage(soapMessage);
+    }
+    
+    // Method to load SOAP message from file or construct programmatically
+    public static Document loadSOAPMessage(String filePath) throws SOAPException, IOException {
+    	try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true); // Ensure namespaces are processed
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            String xmlContent = readTextFile(filePath);
+            System.out.println(builder.parse(new ByteArrayInputStream(xmlContent.getBytes())));
+            return builder.parse(new ByteArrayInputStream(xmlContent.getBytes()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    
+    }
+    
+	private static String readTextFile(String filePath) throws FileNotFoundException, IOException {
+		StringBuilder content = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+           
+            while ((line = br.readLine()) != null) {
+                content.append(line).append("\n");
+                System.out.println(line);
+            }
+        }
+        return content.toString();
+    }
+
+	public static PrivateKey getPrivateKeyPK() {
+		// PrivateKey privateKey = null;
+		try {
+
+			boolean isAliasWithPrivateKey = false;
+			KeyStore keyStore = KeyStore.getInstance("JKS");
+			keyStore.load(new FileInputStream("ibmdevportal.jks"), jkspwd.toCharArray());
+
+			// iterate over all aliases
+			Enumeration<String> es = keyStore.aliases();
+			String alias = "";
+			while (es.hasMoreElements()) {
+				alias = (String) es.nextElement();
+				// if alias refers to a private key break at that point
+				// as we want to use that certificate
+				if (isAliasWithPrivateKey = keyStore.isKeyEntry(alias)) {
+					break;
+				}
+			}
+
+			return (PrivateKey) keyStore.getKey(alias, jkspwd.toCharArray());
+
+//			if (isAliasWithPrivateKey) {
+//
+//				KeyStore.PrivateKeyEntry pkEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry(alias,
+//						new KeyStore.PasswordProtection(jkspwd.toCharArray()));
+//
+//				PrivateKey myPrivateKey = pkEntry.getPrivateKey();
+//				byte[] privateKey = (myPrivateKey.getEncoded());
+//				base64PrivateKey = DatatypeConverter.printBase64Binary(privateKey);
+//			}
+
+		} catch (Exception e) {
+			throw new RuntimeException("X-JavaError: Cannot fetch private key");
+		}
+	}
+	public static PublicKey getPublicKey() throws CertificateException, IOException {
+
+			FileInputStream fis = new FileInputStream(certpath);
+			CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+			X509Certificate certificate = (X509Certificate) certificateFactory.generateCertificate(fis);
+			fis.close();
+
+			PublicKey publicKey = certificate.getPublicKey();
+			return publicKey;
+			}
+	
+    
+
+	public static String getProperty(String key, String propertiesPath) {
+
+		BufferedReader reader;
+		try {
+			reader = new BufferedReader(new FileReader(propertiesPath));
+			Properties p = new Properties();
+			p.load(reader);
+			return p.getProperty(key);
+		}
+
+		catch (Exception e) {
+
+			return "X-JavaError" + " " + e.toString();
+
+		}
+
+	}
+	
+	
+    // Method to send SOAP message
+    public static void sendSOAPMessage(Document soapMessage) {
+    	
+    }
+}
+
+
+
+----------------------------------------------------------------------------------------
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import org.w3c.dom.Document;
