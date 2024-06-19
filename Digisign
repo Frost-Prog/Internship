@@ -1,3 +1,138 @@
+
+import java.io.*;
+import java.security.*;
+import java.security.cert.X509Certificate;
+import java.util.Collections;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.crypto.dsig.*;
+import javax.xml.crypto.dsig.dom.DOMSignContext;
+import javax.xml.crypto.dsig.keyinfo.KeyInfo;
+import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
+import javax.xml.crypto.dsig.spec.TransformParameterSpec;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+import com.ibm.broker.javacompute.MbJavaComputeNode;
+import com.ibm.broker.plugin.*;
+
+public class SF_IMPS_Generate_DigitalSign extends MbJavaComputeNode {
+
+    private KeyStore.PrivateKeyEntry keyEntry;
+
+    public void evaluate(MbMessageAssembly inAssembly) throws MbException {
+        MbOutputTerminal out = getOutputTerminal("out");
+
+        MbMessage inMessage = inAssembly.getMessage();
+        MbMessageAssembly outAssembly = null;
+        try {
+            int ccsid = 0;
+            // create new message as a copy of the input
+            MbMessage outMessage = new MbMessage();
+            outAssembly = new MbMessageAssembly(inAssembly, outMessage);
+
+            MbElement outRoot = outMessage.getRootElement();
+            MbElement xmlMessage = inMessage.getRootElement().getLastChild();
+            byte[] xml = xmlMessage.toBitstream(null, null, null, 0, ccsid, 0);
+            String msg = new String(xml);
+            String SignatureValue = new String(createDigitalSignature(msg));
+
+            MbElement outParser = outRoot.createElementAsLastChild(MbXMLNSC.PARSER_NAME);
+            outParser.createElementAsLastChild(MbElement.TYPE_VALUE, "DigiSign", SignatureValue);
+
+        } catch (MbException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new MbUserException(this, "evaluate()", "", "", e.toString(), null);
+        }
+
+        out.propagate(outAssembly);
+    }
+
+    public String createDigitalSignature(String message) throws Exception {
+        String outPut = "";
+        try {
+            this.keyEntry = getKeyFromKeyStore();
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setNamespaceAware(true);
+            Document inputDocument = dbf.newDocumentBuilder().parse(new InputSource(new StringReader(message)));
+            Document signedDocument = generateSignValue(inputDocument, false); // Set includeKeyInfo to false
+
+            StringWriter stringWriter = new StringWriter();
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer trans = tf.newTransformer();
+            trans.transform(new DOMSource(signedDocument), new StreamResult(stringWriter));
+            outPut = stringWriter.getBuffer().toString();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error while digitally signing the XML document", e);
+        }
+
+        return outPut;
+    }
+
+    private KeyStore.PrivateKeyEntry getKeyFromKeyStore() {
+        InputStream keyFileStream = null;
+        try {
+            String KeystorePathValue = getUserDefinedAttribute("KeystorePath").toString();
+            String KeystorePasswordValue = getUserDefinedAttribute("KeystorePassword").toString();
+            String KeystoreAliasNameValue = getUserDefinedAttribute("AliasFilename").toString();
+            char[] password = KeystorePasswordValue.toCharArray();
+            KeyStore ks = KeyStore.getInstance("jks");
+            keyFileStream = new FileInputStream(KeystorePathValue);
+            ks.load(keyFileStream, password);
+            KeyStore.PrivateKeyEntry key = (KeyStore.PrivateKeyEntry) ks.getEntry(KeystoreAliasNameValue, new KeyStore.PasswordProtection(password));
+            return key;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            if (keyFileStream != null) {
+                try {
+                    keyFileStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public Document generateSignValue(Document xmlDoc, boolean includeKeyInfo) throws Exception {
+        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+        Reference ref = fac.newReference("", fac.newDigestMethod("http://www.w3.org/2001/04/xmlenc#sha256", null),
+                Collections.singletonList(fac
+                        .newTransform("http://www.w3.org/2000/09/xmldsig#enveloped-signature", (TransformParameterSpec) null)), null, null);
+
+        SignedInfo sInfo = fac.newSignedInfo(fac.newCanonicalizationMethod("http://www.w3.org/TR/2001/REC-xml-c14n-20010315", (C14NMethodParameterSpec) null), fac
+                .newSignatureMethod("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256", null),
+                Collections.singletonList(ref));
+
+        if (this.keyEntry == null) {
+            throw new RuntimeException("Key could not be read for digital signature. Please check value of signature alias and signature password, and restart the Auth Client");
+        }
+
+        DOMSignContext dsc = new DOMSignContext(this.keyEntry.getPrivateKey(), xmlDoc.getDocumentElement());
+        XMLSignature signature = fac.newXMLSignature(sInfo, includeKeyInfo ? getKeyInfo(fac) : null); // Don't include public key info
+        signature.sign(dsc);
+
+        Node node = dsc.getParent();
+        return node.getOwnerDocument();
+    }
+
+    private KeyInfo getKeyInfo(XMLSignatureFactory xmlSigFactory) {
+        // Return an empty KeyInfo if includeKeyInfo is false
+        KeyInfoFactory keyInfoFact = xmlSigFactory.getKeyInfoFactory();
+        return keyInfoFact.newKeyInfo(Collections.emptyList());
+    }
+
+}
+
+////////////////////////////////////////////////////////////////////////
 package IMPS_Generate_DigitalSign;
 
 import java.io.FileInputStream;
