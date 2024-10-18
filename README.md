@@ -1,3 +1,155 @@
+Here's the Java equivalent of the provided C# code for AES encryption:
+
+```
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.util.Base64;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+
+public class CipherService {
+
+    private static final String AES_ALGORITHM = "AES";
+    private static final String AES_MODE = "AES/CBC/PKCS5Padding";
+    private static final int IV_SIZE = 16; // 128 bits
+
+    private byte[] key;
+
+    public CipherService(String key) {
+        this.key = adjustKeySize(Base64.getDecoder().decode(key), 256);
+    }
+
+    private byte[] adjustKeySize(byte[] key, int validKeySize) {
+        int adjustedKeySize = key.length * 8;
+
+        if (adjustedKeySize == validKeySize) {
+            return key; // Key is already of the correct size
+        } else if (adjustedKeySize < validKeySize) {
+            // Pad the key with zeros to the right
+            byte[] paddedKey = new byte[validKeySize / 8];
+            System.arraycopy(key, 0, paddedKey, 0, key.length);
+            return paddedKey;
+        } else {
+            // Truncate the key to the correct size
+            byte[] truncatedKey = new byte[validKeySize / 8];
+            System.arraycopy(key, 0, truncatedKey, 0, truncatedKey.length);
+            return truncatedKey;
+        }
+    }
+
+    public byte[] encryptFromBase64(String plainText) throws Exception {
+        // Create AES key
+        SecretKeySpec aesKey = new SecretKeySpec(key, AES_ALGORITHM);
+
+        // Generate IV
+        SecureRandom random = new SecureRandom();
+        byte[] iv = new byte[IV_SIZE];
+        random.nextBytes(iv);
+
+        // Create AES cipher
+        Cipher cipher = Cipher.getInstance(AES_MODE);
+        cipher.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(iv));
+
+        // Encrypt data
+        ByteArrayOutputStream ms = new ByteArrayOutputStream();
+        ms.write(iv); // Prepend IV to encrypted data
+        InputStream is = new ByteArrayInputStream(plainText.getBytes(StandardCharsets.UTF_8));
+        OutputStream os = new CryptoOutputStream(ms, cipher, CryptoOutputStream.MODE_WRITE);
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = is.read(buffer)) != -1) {
+            os.write(buffer, 0, bytesRead);
+        }
+        os.close();
+
+        return ms.toByteArray();
+    }
+
+    public String encrypt(String plainText) throws Exception {
+        byte[] encryptedBytes = encryptFromBase64(plainText);
+        return Base64.getEncoder().encodeToString(encryptedBytes);
+    }
+
+    private static class CryptoOutputStream extends OutputStream {
+        private final OutputStream os;
+        private final Cipher cipher;
+        private final int mode;
+
+        public CryptoOutputStream(OutputStream os, Cipher cipher, int mode) {
+            this.os = os;
+            this.cipher = cipher;
+            this.mode = mode;
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            byte[] encrypted = cipher.update(new byte[]{(byte) b});
+            if (encrypted != null) {
+                os.write(encrypted);
+            }
+        }
+
+        @Override
+        public void write(byte[] b) throws IOException {
+            byte[] encrypted = cipher.update(b);
+            if (encrypted != null) {
+                os.write(encrypted);
+            }
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+            byte[] encrypted = cipher.update(b, off, len);
+            if (encrypted != null) {
+                os.write(encrypted);
+            }
+        }
+
+        @Override
+        public void flush() throws IOException {
+            byte[] encrypted = cipher.doFinal();
+            if (encrypted != null) {
+                os.write(encrypted);
+            }
+            os.flush();
+        }
+
+        @Override
+        public void close() throws IOException {
+            os.close();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        String key = "your_aes_key_here";
+        CipherService cipherService = new CipherService(key);
+        String plainText = "your_plain_text_here";
+        String encryptedText = cipherService.encrypt(plainText);
+        System.out.println("Encrypted Text: " + encryptedText);
+    }
+}
+```
+
+_Note_: Replace `"your_aes_key_here"` and `"your_plain_text_here"` with your actual AES key and plain text.
+
+_Dependencies_: Java 8 or later (for `java.util.Base64`)
+
+This Java code performs:
+
+1. Key adjustment to ensure correct size.
+2. IV generation.
+3. AES encryption using CBC mode and PKCS5 padding.
+
+
+
+new code above new
 Here's the Java equivalent of the provided C# code for AES decryption:
 
 ```
