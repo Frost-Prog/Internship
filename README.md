@@ -1,3 +1,98 @@
+Here's the Java equivalent of the provided C# code for AES decryption:
+
+```
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
+
+public class AESDecryptor {
+
+    private static final String AES_ALGORITHM = "AES";
+    private static final String AES_MODE = "AES/CBC/PKCS5Padding";
+    private static final int IV_SIZE = 16; // 128 bits
+
+    private byte[] key;
+
+    public AESDecryptor(byte[] key) {
+        this.key = key;
+    }
+
+    public String decrypt(String base64EncryptedText) throws Exception {
+        // Remove unnecessary characters
+        base64EncryptedText = base64EncryptedText.trim().replaceAll("\"", "").replaceAll("\r", "").replaceAll("\n", "").replaceAll(" ", "");
+
+        // Validate base64 string
+        for (char c : base64EncryptedText.toCharArray()) {
+            if (!Character.isLetterOrDigit(c) && c != '+' && c != '/' && c != '=') {
+                throw new Exception("Unexpected character: " + c + " (Unicode: " + (int) c + ")");
+            }
+        }
+
+        // Decode base64 string
+        byte[] encryptedBytes = Base64.getDecoder().decode(base64EncryptedText);
+
+        return decryptFromBase64(encryptedBytes);
+    }
+
+    public String decryptFromBase64(byte[] cipherTextWithIv) throws Exception {
+        if (cipherTextWithIv.length < IV_SIZE) {
+            throw new Exception("The cipher Text With Iv array is too short to contain the IV.");
+        }
+
+        // Extract IV
+        byte[] iv = new byte[IV_SIZE];
+        System.arraycopy(cipherTextWithIv, 0, iv, 0, IV_SIZE);
+
+        // Extract encrypted data
+        byte[] cipherText = new byte[cipherTextWithIv.length - IV_SIZE];
+        System.arraycopy(cipherTextWithIv, IV_SIZE, cipherText, 0, cipherText.length);
+
+        // Create AES key
+        SecretKeySpec aesKey = new SecretKeySpec(key, AES_ALGORITHM);
+
+        // Create IV parameter spec
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+
+        // Create AES cipher
+        Cipher cipher = Cipher.getInstance(AES_MODE);
+        cipher.init(Cipher.DECRYPT_MODE, aesKey, ivSpec);
+
+        // Decrypt data
+        byte[] decryptedBytes = cipher.doFinal(cipherText);
+
+        // Return decrypted string
+        return new String(decryptedBytes, StandardCharsets.UTF_8);
+    }
+
+    public static void main(String[] args) throws Exception {
+        byte[] key = "your_aes_key_here".getBytes();
+        AESDecryptor decryptor = new AESDecryptor(key);
+        String base64EncryptedText = "your_base64_encrypted_text_here";
+        String decryptedText = decryptor.decrypt(base64EncryptedText);
+        System.out.println("Decrypted Text: " + decryptedText);
+    }
+}
+```
+
+*Note*: Replace `"your_aes_key_here"` and `"your_base64_encrypted_text_here"` with your actual AES key and base64-encrypted text.
+
+*Dependencies*: Java 8 or later (for `java.util.Base64`)
+
+This Java code performs:
+
+1. Input validation and sanitization
+2. Base64 decoding
+3. IV extraction
+4. AES decryption using CBC mode and PKCS5 padding
+
+Ensure to handle exceptions and errors according to your application's requirements.
+
+
+new code above
 package com.sbi.tcs;
 
 import java.io.BufferedReader;
