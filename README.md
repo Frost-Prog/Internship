@@ -1,5 +1,49 @@
 To clarify:
 
+_IV Extraction_
+
+You want to extract the first 16 characters (not bytes) from the base64-encoded encrypted data.
+
+_Base64 Character Set_
+
+Each base64 character represents 6 bits. Therefore, 16 characters equal 96 bits (16 x 6 = 96).
+
+_IV Size_
+
+The resulting IV size would be 12 bytes (96 bits / 8 = 12).
+
+Here's the updated Java code:
+
+```
+public String decrypt(String encryptedBase64) throws Exception {
+    // Decode base64 string
+    String ivBase64 = encryptedBase64.substring(0, 16);
+    String encryptedDataBase64 = encryptedBase64.substring(16);
+
+    byte[] iv = Base64.getDecoder().decode(ivBase64);
+    byte[] encryptedBytes = Base64.getDecoder().decode(encryptedDataBase64);
+
+    // Create AES key
+    SecretKeySpec aesKey = new SecretKeySpec(key, "AES");
+
+    // Create AES cipher
+    Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding");
+    cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+
+    // Decrypt data
+    byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
+
+    // Return decrypted string
+    return new String(decryptedBytes, StandardCharsets.UTF_8);
+}
+```
+
+This updated code correctly extracts the IV from the first 16 characters of the base64-encoded encrypted data.
+
+new code above new dec
+
+To clarify:
+
 *PKCS5 vs PKCS7 Padding*
 
 For AES encryption:
