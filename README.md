@@ -1,3 +1,61 @@
+To clarify:
+
+*PKCS5 vs PKCS7 Padding*
+
+For AES encryption:
+
+- PKCS5 padding (RFC 2898) supports block sizes up to 8 bytes (64 bits).
+- PKCS7 padding (RFC 5652) supports block sizes up to 255 bytes.
+
+Although PKCS5 and PKCS7 padding differ in supported block sizes, they use the same padding structure for AES encryption.
+
+*Decryption Compatibility*
+
+Data encrypted with PKCS7 padding can be decrypted using PKCS5 padding, as demonstrated in your updated decryption function.
+
+*Updated Decryption Function*
+
+To maintain consistency, update the `Cipher.getInstance()` line to reflect PKCS7 padding:
+
+```
+public String decrypt(String encryptedBase64) throws Exception {
+    byte[] encryptedBytes = Base64.getDecoder().decode(encryptedBase64);
+    byte[] iv = new byte[16];
+    System.arraycopy(encryptedBytes, 0, iv, 0, 16);
+    byte[] encryptedData = new byte[encryptedBytes.length - 16];
+    System.arraycopy(encryptedBytes, 16, encryptedData, 0, encryptedData.length);
+
+    SecretKeySpec aesKey = new SecretKeySpec(key, "AES");
+    Cipher cipher = Cipher.getInstance("AES/CBC/PKCS7Padding"); // Updated to PKCS7Padding
+    cipher.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(iv));
+    byte[] decryptedBytes = cipher.doFinal(encryptedData);
+
+    return new String(decryptedBytes, StandardCharsets.UTF_8);
+}
+```
+
+*Key Considerations*
+
+Ensure encryption and decryption settings match:
+
+*Encryption*
+
+1. AES algorithm
+2. CBC mode
+3. PKCS7 padding
+4. 256-bit key
+5. 128-bit IV
+
+*Decryption*
+
+1. AES algorithm
+2. CBC mode
+3. PKCS7 padding
+4. Same 256-bit key
+5. Same 128-bit IV (extracted from encrypted data)
+
+Your updated decryption function correctly accommodates PKCS7 padding.
+new code above decrypt 
 lKHWPrDgRpM8vfNAEm/1YjXUE5zd2UeOryi8VVGpuBaWNl42ivKfVZ5YQnShEDGEKC1G8Czm18kr5NO2Xyvhvtd51DFZxFz5p3wgNLJZlHO/vuoNRDg6sFWetRIKnjfGfYltfuI1SLLacNQvk5YKDOBAlx99ftniDAuzO5Iyzz3S4xv0X4Njawci9mT4UNPeRGuhB/DBIkoWfV+OBBH6qXXzho1jp8l8odGxpaLNxbNVrlwxI1S3P+XurqGeVMVb
 
 above is the enc data to decrypt
