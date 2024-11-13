@@ -1,4 +1,63 @@
 
+async function verifyDigitalSignature(xmlString) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+    // Extract the signature and the certificate elements
+    const signatureValue = xmlDoc.getElementsByTagName("signature")[0]?.textContent;
+    const x509Certificate = xmlDoc.getElementsByTagName("X509Certificate")[0]?.textContent;
+
+    if (!signatureValue || !x509Certificate) {
+        throw new Error("Signature or X509Certificate element not found in the XML data.");
+    }
+
+    // Decode the certificate and the signature from Base64
+    const certificateBytes = Uint8Array.from(atob(x509Certificate), c => c.charCodeAt(0));
+    const signatureBytes = Uint8Array.from(atob(signatureValue), c => c.charCodeAt(0));
+
+    // Import the public key from the certificate
+    const publicKey = await importPublicKeyFromX509(certificateBytes);
+
+    // Get the data to verify
+    const signedData = getDataToVerify(xmlDoc); // Define this function to get the exact data that was signed
+
+    // Verify the signature
+    const isValid = await crypto.subtle.verify(
+        {
+            name: "RSASSA-PKCS1-v1_5", // Assuming RSASSA-PKCS1-v1_5; modify as per your needs
+            hash: "SHA-256",           // Modify if a different hash algorithm is used
+        },
+        publicKey,
+        signatureBytes,
+        signedData
+    );
+
+    return isValid;
+}
+
+async function importPublicKeyFromX509(certBytes) {
+    // Convert X.509 certificate to a CryptoKey
+    return crypto.subtle.importKey(
+        "spki",
+        certBytes,
+        {
+            name: "RSASSA-PKCS1-v1_5", // Modify based on the algorithm used
+            hash: "SHA-256",           // Modify based on the hash used
+        },
+        true,
+        ["verify"]
+    );
+}
+
+function getDataToVerify(xmlDoc) {
+    // Implement this function based on what part of the XML data needs to be verified.
+    // Typically, you might want to use some subset of the XML or canonicalize it.
+    // For simplicity, here's a placeholder:
+    const dataElement = xmlDoc.getElementsByTagName("DataToBeSigned")[0];
+    return new TextEncoder().encode(dataElement?.textContent || "");
+}
+
+------------------------------
 
 	 public static String verifyXMLDigitalSignClient(String xmlDocument) {
 	    boolean validFlag = false; 
