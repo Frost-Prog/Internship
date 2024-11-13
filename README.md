@@ -1,4 +1,75 @@
+async function verifyXMLDigitalSignClient(xmlDocument) {
+    let validFlag = false;
 
+    // Parse the XML document
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlDocument, "text/xml");
+
+    // Get the Signature element
+    const signatureNode = doc.getElementsByTagName("Signature")[0];
+    if (!signatureNode) {
+        console.log("No XML signature found");
+        return false;
+    }
+
+    // Extract the X509Certificate from the X509Data element within the XML
+    const x509CertificateNode = doc.getElementsByTagName("X509Certificate")[0];
+    if (!x509CertificateNode) {
+        console.log("No X509Certificate found in XML");
+        return false;
+    }
+
+    const certString = x509CertificateNode.textContent.replace(/\s+/g, '');
+    const certBytes = Uint8Array.from(atob(certString), c => c.charCodeAt(0));
+
+    try {
+        // Import the certificate as a public key
+        const publicKey = await crypto.subtle.importKey(
+            "spki",
+            certBytes.buffer,
+            {
+                name: "RSASSA-PKCS1-v1_5",  // Match the algorithm used in the signature
+                hash: { name: "SHA-256" }, // Match the hash algorithm used in the signature
+            },
+            true,
+            ["verify"]
+        );
+
+        // Get the signature value from the XML
+        const signatureValue = atob(signatureNode.getElementsByTagName("SignatureValue")[0].textContent);
+        const signatureBytes = Uint8Array.from(signatureValue, c => c.charCodeAt(0));
+
+        // Get the data that was signed - typically a specific XML subset
+        const signedData = new TextEncoder().encode(getSignedData(doc)); // Implement `getSignedData` based on your XML schema
+
+        // Verify the signature
+        validFlag = await crypto.subtle.verify(
+            {
+                name: "RSASSA-PKCS1-v1_5", // Ensure matching algorithm
+                hash: { name: "SHA-256" }, // Ensure matching hash
+            },
+            publicKey,
+            signatureBytes,
+            signedData
+        );
+    } catch (error) {
+        console.error("Verification failed", error);
+    }
+
+    return validFlag;
+}
+
+// Helper function to get data to verify
+function getSignedData(doc) {
+    // Implement this based on the XML structure
+    // This should return the data that was originally signed
+    // For example:
+    const dataElement = doc.getElementsByTagName("DataToBeSigned")[0];
+    return dataElement?.textContent || "";
+}
+
+
+----------------------------------
 async function verifyDigitalSignature(xmlString) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, "text/xml");
