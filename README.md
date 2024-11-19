@@ -1,4 +1,65 @@
-	 public static String verifyXMLDigitalSignClient(String xmlDocument) {
+var DOMParser = require('xmldom').DOMParser;
+var XMLCrypto = require('xml-crypto');
+var fs = require('fs');
+
+function verifyXMLDigitalSignClient(xmlDocument, certPath) {
+    try {
+        // Parse the XML document
+        var doc = new DOMParser().parseFromString(xmlDocument, 'text/xml');
+
+        // Find the Signature node
+        var signatureNode = doc.getElementsByTagName('Signature')[0];
+        if (!signatureNode) {
+            console.error("No XML Signature found");
+            return false;
+        }
+
+        // Read the certificate from the provided path
+        var cert = fs.readFileSync(certPath, 'utf8');
+
+        // Create a verifier and set the public key
+        var verifier = new XMLCrypto.SignedXml();
+        verifier.keyInfoProvider = {
+            getKey: function () {
+                return cert;
+            }
+        };
+
+        // Load the XML signature
+        verifier.loadSignature(signatureNode);
+
+        // Verify the signature
+        var isValid = verifier.checkSignature(xmlDocument);
+
+        if (!isValid) {
+            console.error("Invalid XML Signature:", verifier.validationErrors);
+        }
+
+        return isValid;
+    } catch (error) {
+        console.error("Error verifying XML signature:", error);
+        return false;
+    }
+}
+
+// Example Usage
+var xml = `<Your XML Document Here>`;
+var certPath = '/path/to/public_cert.pem';
+
+var isValid = verifyXMLDigitalSignClient(xml, certPath);
+console.log("Is the XML signature valid?", isValid);
+
+  
+  
+  
+  
+new --------------  
+  
+  
+  
+  
+  
+  public static String verifyXMLDigitalSignClient(String xmlDocument) {
 	    boolean validFlag = false; 
 	    Document doc =null;
 	        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
