@@ -1,3 +1,113 @@
+	 public static String verifyXMLDigitalSignClient(String xmlDocument) {
+	    boolean validFlag = false; 
+	    Document doc =null;
+	        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+	        dbf.setNamespaceAware(true);
+	         try {
+				doc = dbf.newDocumentBuilder().parse(new InputSource(new StringReader (xmlDocument)));
+			} catch (SAXException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (ParserConfigurationException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} 
+	        NodeList nl = doc.	 (XMLSignature.XMLNS, "Signature");
+	        if(nl.getLength() == 0){
+	            System.out.println("No xml signature found");
+	            return String.valueOf(false);
+	        }
+	        CertificateFactory certFactory = null;
+			try {
+				certFactory = CertificateFactory.getInstance("X.509");
+			} catch (CertificateException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} 
+	        InputStream is = null;
+			try {
+				is = new FileInputStream(certpath);
+			} catch (FileNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+	        X509Certificate cert = null;
+			try {
+				cert = (X509Certificate) certFactory.generateCertificate(is);
+			} catch (CertificateException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} 
+	        PublicKey publicKey = cert.getPublicKey();
+	        DOMValidateContext valContext = new DOMValidateContext(publicKey, nl.item(0)); 
+	        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+	        XMLSignature signature=null;;
+			try {
+				signature = fac.unmarshalXMLSignature (valContext);
+			} catch (javax.xml.crypto.MarshalException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        try {
+				validFlag=signature.validate(valContext);
+			} catch (XMLSignatureException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        String  flag =String.valueOf(validFlag);
+	        return flag;
+	 } 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function verifyXMLDigitalSignClient(xmlDocument) {
     let validFlag = false;
 
