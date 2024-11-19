@@ -1,5 +1,65 @@
 var DOMParser = require('xmldom').DOMParser;
 var XMLCrypto = require('xml-crypto');
+var forge = require('node-forge');
+
+function verifyXMLDigitalSignClient(xmlDocument) {
+    try {
+        // Parse the XML document
+        var doc = new DOMParser().parseFromString(xmlDocument, 'text/xml');
+
+        // Find the Signature node
+        var signatureNode = doc.getElementsByTagName('Signature')[0];
+        if (!signatureNode) {
+            console.error("No XML Signature found");
+            return false;
+        }
+
+        // Find the X509Certificate node
+        var certNode = doc.getElementsByTagName('X509Certificate')[0];
+        if (!certNode) {
+            console.error("No X509Certificate found in the XML");
+            return false;
+        }
+
+        // Extract the certificate data
+        var base64Cert = certNode.textContent;
+        var pemCert = "-----BEGIN CERTIFICATE-----\n" + base64Cert + "\n-----END CERTIFICATE-----";
+
+        // Create a verifier and set the public key
+        var verifier = new XMLCrypto.SignedXml();
+        verifier.keyInfoProvider = {
+            getKey: function () {
+                return pemCert;
+            }
+        };
+
+        // Load the XML signature
+        verifier.loadSignature(signatureNode);
+
+        // Verify the signature
+        var isValid = verifier.checkSignature(xmlDocument);
+
+        if (!isValid) {
+            console.error("Invalid XML Signature:", verifier.validationErrors);
+        }
+
+        return isValid;
+    } catch (error) {
+        console.error("Error verifying XML signature:", error);
+        return false;
+    }
+}
+
+// Example Usage
+var xml = `<Your XML Document Here>`; // Replace with your actual XML content
+var isValid = verifyXMLDigitalSignClient(xml);
+console.log("Is the XML signature valid?", isValid);
+
+
+
+----------------------------------
+var DOMParser = require('xmldom').DOMParser;
+var XMLCrypto = require('xml-crypto');
 var fs = require('fs');
 
 function verifyXMLDigitalSignClient(xmlDocument, certPath) {
