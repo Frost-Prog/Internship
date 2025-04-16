@@ -1,0 +1,51 @@
+import java.io.FileInputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
+import java.security.cert.CertificateException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
+import java.util.Enumeration;
+
+public class DigitalSigner {
+
+    public static String eisDigitalSignature(String data) {
+        String encData = "";
+
+        try {
+            // Load the .pfx file
+            FileInputStream fis = new FileInputStream("path/to/your/certificate.pfx");
+            String pfxPassword = "yourPfxPassword";  // Replace with your actual password
+
+            KeyStore keystore = KeyStore.getInstance("PKCS12");
+            keystore.load(fis, pfxPassword.toCharArray());
+
+            // Get the alias (first one found)
+            Enumeration<String> aliases = keystore.aliases();
+            String alias = null;
+            if (aliases.hasMoreElements()) {
+                alias = aliases.nextElement();
+            }
+
+            // Get the private key
+            Key key = keystore.getKey(alias, pfxPassword.toCharArray());
+            if (key instanceof PrivateKey) {
+                PrivateKey privateKey = (PrivateKey) key;
+
+                // Sign the data
+                Signature privateSignature = Signature.getInstance("SHA256withRSA");
+                privateSignature.initSign(privateKey);
+                privateSignature.update(data.getBytes(StandardCharsets.UTF_8));
+
+                byte[] signature = privateSignature.sign();
+                encData = Base64.getEncoder().encodeToString(signature);
+            } else {
+                return "X-JavaError: Unable to retrieve private key from .pfx file";
+            }
+
+        } catch (Exception e) {
+            return "X-JavaError: " + e.toString();
+        }
+
+        return encData;
+    }
+}
